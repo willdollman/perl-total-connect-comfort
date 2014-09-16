@@ -17,7 +17,17 @@ our @EXPORT_OK = qw( new );
 my $DEBUG = 1;
 $\ = "\n";
 
+# Make the auth token globally accessible
+my $auth_token;
+
+# Requests:
+#   .../Session : Login to service, get user detains
+#   .../locations?userId=377023&allData=True : Get data on all thermostats. If you have multiple locations, you use this to get data on them all.
+#   .../gateways?locationId=364809&allData=False : get data on base station/gateway
+#   .../evoTouchSystems?locationId=364809&allData=True : return all data for a location
+
 sub new {
+    shift;
     my $username = shift || croak "No username supplied";
     my $password = shift || croak "No password supplied";
     my $app_id   = shift || croak "No application id supplied";
@@ -34,11 +44,14 @@ sub new {
         $response_body = read_file($test_file_fh);
     }
     else {
+        print "Actually logging in" if $DEBUG;
+
         my $r = do_login($username, $password, $app_id);
-        # save to file so we can reuse it
+
         open(my $response_fh, '>', $test_file)
-            or die "Unable to save to file: $!";
+            or die "Unable to open file for writing: $!";
         $response_body = $r->content;
+        print $response_fh $response_body;
     }
 
     my $login_response = from_json($response_body);
@@ -48,7 +61,12 @@ sub new {
     my $self;
     $self->{sessionId} = $login_response->{sessionId};
     $self->{username}  = $login_response->{userInfo}->{username};
+    $self->{userID}    = $login_response->{userInfo}->{userID};
     # include a valid_until counter - unsure how long sessions are valid for
+
+    # store auth token
+    $auth_token = $self->{sessionId};
+
     bless $self;
 }
 
