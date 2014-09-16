@@ -23,20 +23,20 @@ sub new {
     my $app_id   = shift || croak "No application id supplied";
     my $is_test  = shift || 0;
 
-    my $test_input = 't/login_response';
-
+    my $test_file = 't/login_response';
     my $response_body;
+
     if ($is_test) {
         print "Using cached response" if $DEBUG;
 
-        open(my $test_input_fh, '<', $test_input)
+        open(my $test_file_fh, '<', $test_file)
             or die "Unable to open test input file";
-        $response_body = read_file($test_input_fh);
+        $response_body = read_file($test_file_fh);
     }
     else {
         my $r = do_login($username, $password, $app_id);
         # save to file so we can reuse it
-        open(my $response_fh, '>', $test_input)
+        open(my $response_fh, '>', $test_file)
             or die "Unable to save to file: $!";
         $response_body = $r->content;
     }
