@@ -52,36 +52,46 @@ sub new {
     bless $self;
 }
 
+# Perform login to API and retrieve sessionId
 sub do_login {
-    my $username = shift || die "No username supplied";
-    my $password = shift || croak "No password supplied";
-    my $app_id   = shift || croak "No application id supplied";
+    my %login_params;
+    $login_params{Username} = shift || croak "No username supplied";
+    $login_params{Password} = shift || croak "No password supplied";
+    $login_params{ApplicationId} = shift || croak "No application id supplied";
 
-    print "Performing login on server" if $DEBUG;
-
-    my $host = 'https://rs.alarmnet.com';
-    my $path = '/TotalConnectComfort/WebAPI/api/Session';
-    my $url = URI->new($host . $path);
-
-    my $login_params = {
-        'Username' => $username,
-        'Password' => $password,
-        'ApplicationId' => $app_id,
-    };
-    my $login_json = to_json($login_params);
-
-    my $ua = LWP::UserAgent->new;
-    $ua->agent('User-Agent: RestSharp 104.1.0.0');
-
-    my $request = HTTP::Request->new(POST => $url);
-    $request->header('Content-Type' => 'application/json');
-    $request->content($login_json);
+    my ($ua, $request) = _setup_request('POST', 'Session', to_json(\%login_params));
 
     my $r = $ua->request($request);
 
     die "Invalid username/password" if $r->code == '401';
     die "App id is incorrect"       if $r->code == '400';
-    die "Unknown error occurred"    if $r->code != '200';
+    die "Unknown error occurred: ", $r->code if $r->code != '200';
+
+    return $r;
+}
+
+# Creates a LWP::UserAgent request with the correct headers
+sub _setup_request {
+    my $request_method = shift || 'GET'; # GET, POST, PUT
+    my $path           = shift || die "No API path supplied";
+    my $content        = shift;
+
+    # Setup location
+    my $host = 'https://rs.alarmnet.com';
+    my $base_path = '/TotalConnectComfort/WebAPI/api/';
+    my $url = URI->new($host . $base_path . $path);
+
+    # Add useragent string
+    my $ua = LWP::UserAgent->new;
+    $ua->agent('User-Agent: RestSharp 104.1.0.0');
+
+    my $request = HTTP::Request->new($request_method => $url);
+    $request->header('Content-Type' => 'application/json');
+    $request->header('sessionId' => $auth_token) if $auth_token;
+    $request->content($content) if $content;
+
+    return ($ua, $request);
+}
 
     return $r;
 }
