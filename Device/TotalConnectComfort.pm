@@ -122,8 +122,6 @@ sub _handle_request {
     my $request = shift;
     my $debug = shift;
 
-    print "Making request:\n", $request->as_string if $debug;
-
     my $r = $ua->request($request);
 
     die "Invalid username/password, or session timed out" if $r->code == '401';
@@ -135,18 +133,31 @@ sub _handle_request {
     return from_json($response_body);
 }
 
+# Put setup and requesting together
+# API parameters in, JSON out.
+sub _api_call {
+    my %params = @_;
+
+    # Setup request
+    my ($ua, $request) = _setup_request(%params);
+
+    print "Making request:\n", $request->as_string if $params{debug};
+
+    # Make request, return JSON
+    return _handle_request($ua, $request);
+}
+
 # Get data on all thermostats. If you have multiple locations, you use this to get data on them all.
 sub get_locations {
     my $self = shift;
 
-    # need a sub to handle setting up auth header, useragent and content-type
-    my ($ua, $request) = _setup_request(
+    my $location_data = _api_call(
         method => 'GET',
         path   => 'locations',
         url_params => { userId => $self->{userID}, allData => 'True', }, # consistent casing, say what?
+        debug => 'true',
     );
 
-    my $location_data = _handle_request($ua, $request);
 }
 
 1;
