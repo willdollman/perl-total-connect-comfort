@@ -77,7 +77,11 @@ sub do_login {
     $login_params{Password} = shift || croak "No password supplied";
     $login_params{ApplicationId} = shift || croak "No application id supplied";
 
-    my ($ua, $request) = _setup_request('POST', 'Session', to_json(\%login_params));
+    my ( $ua, $request ) = _setup_request(
+        method => 'POST',
+        path   => 'Session',
+        body   => to_json( \%login_params ),
+    );
 
     my $r = $ua->request($request);
 
@@ -90,9 +94,7 @@ sub do_login {
 
 # Creates a LWP::UserAgent request with the correct headers
 sub _setup_request {
-    my $request_method = shift || 'GET'; # GET, POST, PUT
-    my $path           = shift || die "No API path supplied";
-    my $content        = shift;
+    my $params = @_;
 
     # Setup location
     my $host = 'https://rs.alarmnet.com';
@@ -103,10 +105,10 @@ sub _setup_request {
     my $ua = LWP::UserAgent->new;
     $ua->agent('User-Agent: RestSharp 104.1.0.0');
 
-    my $request = HTTP::Request->new($request_method => $url);
-    $request->header('Content-Type' => 'application/json');
-    $request->header('sessionId' => $auth_token) if $auth_token;
-    $request->content($content) if $content;
+    my $request = HTTP::Request->new( $params->{request_method} => $url );
+    $request->header( 'Content-Type' => 'application/json' );
+    $request->header( 'sessionId' => $auth_token ) if $auth_token;
+    $request->content( $params->{content} ) if $params->{content};
 
     return ($ua, $request);
 }
