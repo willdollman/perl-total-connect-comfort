@@ -116,6 +116,25 @@ sub _setup_request {
     return ( $ua, $request );
 }
 
+# Actually make the request, handle errors and return JSON-decoded body
+sub _handle_request {
+    my $ua = shift;
+    my $request = shift;
+    my $debug = shift;
+
+    print "Making request:\n", $request->as_string if $debug;
+
+    my $r = $ua->request($request);
+
+    die "Invalid username/password, or session timed out" if $r->code == '401';
+    die "App id is incorrect (or similar error)" if $r->code == '400';
+    die "Unknown error occurred: ", $r->code if $r->code != '200';
+
+    my $response_body = $r->content;
+
+    return from_json($response_body);
+}
+
 # Get data on all thermostats. If you have multiple locations, you use this to get data on them all.
 sub get_locations {
     my $self = shift;
@@ -127,11 +146,7 @@ sub get_locations {
         url_params => { userId => $self->{userID}, allData => 'True', }, # consistent casing, say what?
     );
 
-    print "Theoretical request is:\n", $request->as_string;
-
-    my $r             = $ua->request($request);
-    my $response_body = $r->content;
-    print Dumper $response_body;
+    my $location_data = _handle_request($ua, $request);
 }
 
 1;
