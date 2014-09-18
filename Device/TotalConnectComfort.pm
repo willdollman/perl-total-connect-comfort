@@ -139,7 +139,9 @@ sub _api_call {
     return _handle_request($ua, $request);
 }
 
-# Get data on all thermostats. If you have multiple locations, you use this to get data on them all.
+# Get data for all thermostats in all locations.
+#   If you have multiple locations, you can use this get either
+#   get data on all of them, or get the IDs of each
 sub get_locations {
     my $self = shift;
 
@@ -147,9 +149,9 @@ sub get_locations {
         method => 'GET',
         path   => 'locations',
         url_params => { userId => $self->{userID}, allData => 'True', }, # consistent casing, say what?
-        debug => 'true',
     );
 
+    return $location_data;
 }
 
 1;
