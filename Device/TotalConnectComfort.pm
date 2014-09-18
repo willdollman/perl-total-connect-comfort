@@ -39,29 +39,30 @@ sub new {
     if ($is_test) {
         print "Using cached response" if $DEBUG;
 
-        open(my $test_file_fh, '<', $test_file)
-            or die "Unable to open test input file";
+        open( my $test_file_fh, '<', $test_file )
+          or die "Unable to open test input file";
         $response_body = read_file($test_file_fh);
     }
     else {
         print "Actually logging in" if $DEBUG;
 
-        my $r = do_login($username, $password, $app_id);
+        my $r = do_login( $username, $password, $app_id );
 
-        open(my $response_fh, '>', $test_file)
-            or die "Unable to open file for writing: $!";
+        open( my $response_fh, '>', $test_file )
+          or die "Unable to open file for writing: $!";
         $response_body = $r->content;
         print $response_fh $response_body;
     }
 
     my $login_response = from_json($response_body);
     die "Server response did not contain a session id token"
-        unless $login_response->{sessionId};
+      unless $login_response->{sessionId};
 
     my $self;
     $self->{sessionId} = $login_response->{sessionId};
     $self->{username}  = $login_response->{userInfo}->{username};
     $self->{userID}    = $login_response->{userInfo}->{userID};
+
     # include a valid_until counter - unsure how long sessions are valid for
 
     # store auth token
@@ -73,8 +74,8 @@ sub new {
 # Perform login to API and retrieve sessionId
 sub do_login {
     my %login_params;
-    $login_params{Username} = shift || croak "No username supplied";
-    $login_params{Password} = shift || croak "No password supplied";
+    $login_params{Username}      = shift || croak "No username supplied";
+    $login_params{Password}      = shift || croak "No password supplied";
     $login_params{ApplicationId} = shift || croak "No application id supplied";
 
     my ( $ua, $request ) = _setup_request(
@@ -97,9 +98,9 @@ sub _setup_request {
     my $params = @_;
 
     # Setup location
-    my $host = 'https://rs.alarmnet.com';
+    my $host      = 'https://rs.alarmnet.com';
     my $base_path = '/TotalConnectComfort/WebAPI/api/';
-    my $url = URI->new($host . $base_path . $path);
+    my $url       = URI->new( $host . $base_path . $params->{path} );
 
     # Add useragent string
     my $ua = LWP::UserAgent->new;
@@ -110,7 +111,7 @@ sub _setup_request {
     $request->header( 'sessionId' => $auth_token ) if $auth_token;
     $request->content( $params->{content} ) if $params->{content};
 
-    return ($ua, $request);
+    return ( $ua, $request );
 }
 
     return $r;
