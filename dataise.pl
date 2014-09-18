@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 use Data::Dumper;
+use Text::Table;
 
 use Device::TotalConnectComfort qw( new );
 
@@ -34,7 +35,14 @@ sub describe_locations {
 
     # Let's just look at the first location
     print "\nGot ", scalar @{$location_data->[0]->{devices}}, " devices:";
+    my $tb = Text::Table->new('Location', 'Temperature', 'Status');
     for my $device (@{$location_data->[0]->{devices}}) {
-        print "  $device->{name}";
+        $tb->load([
+            "$device->{name} ",
+            "$device->{thermostat}->{indoorTemperature}°C",
+            $device->{thermostat}->{changeableValues}->{mode},
+        ]);
     }
+
+    print $tb;
 }
