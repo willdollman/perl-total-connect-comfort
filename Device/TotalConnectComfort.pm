@@ -34,27 +34,30 @@ sub new {
     my $is_test  = shift || 0;
 
     my $test_file = 't/login_response';
-    my $response_body;
+    my $login_response;
 
     if ($is_test) {
         print "Using cached response" if $DEBUG;
 
         open( my $test_file_fh, '<', $test_file )
           or die "Unable to open test input file";
-        $response_body = read_file($test_file_fh);
+        my $response_body = read_file($test_file_fh);
+        $login_response = from_json($response_body);
     }
     else {
         print "Actually logging in" if $DEBUG;
 
-        my $r = do_login( $username, $password, $app_id );
+        $login_response = do_login(
+            Username => $username,
+            Password => $password,
+            ApplicationId => $app_id,
+        );
 
         open( my $response_fh, '>', $test_file )
           or die "Unable to open file for writing: $!";
-        $response_body = $r->content;
-        print $response_fh $response_body;
+        print $response_fh to_json($login_response);
     }
 
-    my $login_response = from_json($response_body);
     die "Server response did not contain a session id token"
       unless $login_response->{sessionId};
 
@@ -71,26 +74,15 @@ sub new {
     bless $self;
 }
 
-# Perform login to API and retrieve sessionId
+# Perform login to API
 sub do_login {
-    my %login_params;
-    $login_params{Username}      = shift || croak "No username supplied";
-    $login_params{Password}      = shift || croak "No password supplied";
-    $login_params{ApplicationId} = shift || croak "No application id supplied";
+    my %login_params = @_;
 
-    my ( $ua, $request ) = _setup_request(
+    return _api_call(
         method => 'POST',
         path   => 'Session',
         body   => to_json( \%login_params ),
     );
-
-    my $r = $ua->request($request);
-
-    die "Invalid username/password" if $r->code == '401';
-    die "App id is incorrect"       if $r->code == '400';
-    die "Unknown error occurred: ", $r->code if $r->code != '200';
-
-    return $r;
 }
 
 # Creates a LWP::UserAgent request with the correct headers
