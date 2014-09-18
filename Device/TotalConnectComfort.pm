@@ -95,26 +95,25 @@ sub do_login {
 
 # Creates a LWP::UserAgent request with the correct headers
 sub _setup_request {
-    my $params = @_;
+    my %params = @_;
+    # method, path, url_params (url parameters), body (body content)
 
     # Setup location
     my $host      = 'https://rs.alarmnet.com';
     my $base_path = '/TotalConnectComfort/WebAPI/api/';
-    my $url       = URI->new( $host . $base_path . $params->{path} );
+    my $url       = URI->new( $host . $base_path . $params{path} );
+    $url->query_form($params{url_params}) if $params{url_params};
 
     # Add useragent string
     my $ua = LWP::UserAgent->new;
     $ua->agent('User-Agent: RestSharp 104.1.0.0');
 
-    my $request = HTTP::Request->new( $params->{request_method} => $url );
+    my $request = HTTP::Request->new( $params{method} => $url );
     $request->header( 'Content-Type' => 'application/json' );
     $request->header( 'sessionId' => $auth_token ) if $auth_token;
-    $request->content( $params->{content} ) if $params->{content};
+    $request->content( $params{body} ) if $params{body};
 
     return ( $ua, $request );
-}
-
-    return $r;
 }
 
 1;
