@@ -116,4 +116,22 @@ sub _setup_request {
     return ( $ua, $request );
 }
 
+# Get data on all thermostats. If you have multiple locations, you use this to get data on them all.
+sub get_locations {
+    my $self = shift;
+
+    # need a sub to handle setting up auth header, useragent and content-type
+    my ($ua, $request) = _setup_request(
+        method => 'GET',
+        path   => 'locations',
+        url_params => { userId => $self->{userID}, allData => 'True', }, # consistent casing, say what?
+    );
+
+    print "Theoretical request is:\n", $request->as_string;
+
+    my $r             = $ua->request($request);
+    my $response_body = $r->content;
+    print Dumper $response_body;
+}
+
 1;
