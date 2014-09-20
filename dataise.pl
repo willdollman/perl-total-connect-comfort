@@ -27,6 +27,9 @@ describe_locations($locations_data);
 my $location_id = $locations_data->[0]->{locationID};
 print "Setting default location ID to $location_id\n";
 
+my $location_data = $cn->get_location($location_id);
+describe_devices($location_data->[0]);
+
 # Print some info
 sub describe_locations {
     my $locations_data = shift;

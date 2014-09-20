@@ -154,4 +154,18 @@ sub get_locations {
     return $location_data;
 }
 
+# Get data for a specific location
+sub get_location {
+    my $self = shift;
+    my $location_id = shift;
+
+    my $location_data = _api_call(
+        method => 'GET',
+        path   => 'evoTouchSystems',
+        url_params => { locationId => $location_id, allData => 'True', },
+    );
+
+    return $location_data;
+}
+
 1;
