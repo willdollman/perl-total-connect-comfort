@@ -20,23 +20,30 @@ my $cn = Device::TotalConnectComfort->new($username, $password, $app_id, $is_tes
 print "Logged in as $cn->{username}";
 
 # Get data for all our locations
-my $location_data = $cn->get_locations;
+my $locations_data = $cn->get_locations;
 # ... and do something interesting with it
-describe_locations($location_data);
+describe_locations($locations_data);
+# Set default location id for other requests
+my $location_id = $locations_data->[0]->{locationID};
+print "Setting default location ID to $location_id\n";
 
 # Print some info
 sub describe_locations {
+    my $locations_data = shift;
+
+    print "Found ", scalar @$locations_data, ' ', (scalar @$locations_data == 1) ? 'location' : 'locations' ,"\n";
+    for my $location (@$locations_data) {
+        print "Location $location->{locationID} ($location->{streetAddress})\n---";
+        describe_devices($location);
+    }
+}
+
+sub describe_devices {
     my $location_data = shift;
 
-    print "Got ", scalar @$location_data, " locations:";
-    for my $locations (@$location_data) {
-        print "  ID: $locations->{locationID}";
-    }
-
-    # Let's just look at the first location
-    print "\nGot ", scalar @{$location_data->[0]->{devices}}, " devices:";
+    #print "\n", scalar @{$location_data->{devices}}, " devices:";
     my $tb = Text::Table->new('Location', 'Temperature', 'Status');
-    for my $device (@{$location_data->[0]->{devices}}) {
+    for my $device (@{$location_data->{devices}}) {
         $tb->load([
             "$device->{name} ",
             "$device->{thermostat}->{indoorTemperature}°C",
