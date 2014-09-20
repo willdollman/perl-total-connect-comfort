@@ -3,10 +3,6 @@
 use warnings;
 use strict;
 
-use Data::Dumper;
-use Data::Printer;
-use Text::Table;
-
 use Device::TotalConnectComfort qw( new );
 
 my $username = '';
