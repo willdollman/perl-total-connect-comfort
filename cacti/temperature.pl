@@ -35,7 +35,7 @@ sub cacti_output {
         my $setpoint = $device->{thermostat}->{changeableValues}->{heatSetpoint}->{value};
 
         $output .= "$name:$temperature ";
-        $output .= "$name:$setpoint ";
+        $output .= $name . "_setpoint:$setpoint ";
 
         $boiler_on = 1 if ($setpoint > $temperature);
     }
