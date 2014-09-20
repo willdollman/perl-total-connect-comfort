@@ -14,7 +14,7 @@ use LWP::UserAgent;
 use base qw( Exporter );
 our @EXPORT_OK = qw( new );
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 $\ = "\n";
 
 # Make the auth token globally accessible
