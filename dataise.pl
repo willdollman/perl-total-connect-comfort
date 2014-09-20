@@ -21,12 +21,13 @@ print "Logged in as $cn->{username}";
 
 # Get data for all our locations
 my $locations_data = $cn->get_locations;
-# ... and do something interesting with it
 describe_locations($locations_data);
+
 # Set default location id for other requests
 my $location_id = $locations_data->[0]->{locationID};
 print "Setting default location ID to $location_id\n";
 
+# Get data on the default location
 my $location_data = $cn->get_location($location_id);
 describe_devices($location_data->[0]);
 
