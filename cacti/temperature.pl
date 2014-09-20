@@ -27,11 +27,20 @@ sub cacti_output {
     my $location = $locations_data->[0];
 
     my $output;
+    my $boiler_on = 0;
     for my $device (@{$location->{devices}}) {
         $device->{name} =~ s/\s/_/g;
-        $device->{name} = lc $device->{name};
-        $output .= "$device->{name}:$device->{thermostat}->{indoorTemperature} "; 
+        my $name = lc $device->{name};
+        my $temperature = $device->{thermostat}->{indoorTemperature};
+        my $setpoint = $device->{thermostat}->{changeableValues}->{heatSetpoint}->{value};
+
+        $output .= "$name:$temperature ";
+        $output .= "$name:$setpoint ";
+
+        $boiler_on = 1 if ($setpoint > $temperature);
     }
+
+    $output .= "boiler_status:$boiler_on ";
 
     print $output;
 }

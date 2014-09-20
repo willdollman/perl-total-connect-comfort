@@ -50,12 +50,13 @@ sub describe_devices {
     my $location_data = shift;
 
     #print "\n", scalar @{$location_data->{devices}}, " devices:";
-    my $tb = Text::Table->new('Location', 'Temperature', 'Status');
+    my $tb = Text::Table->new('Location', 'Temperature', 'Status', 'Setpoint');
     for my $device (@{$location_data->{devices}}) {
         $tb->load([
             "$device->{name} ",
             "$device->{thermostat}->{indoorTemperature}°C",
             $device->{thermostat}->{changeableValues}->{mode},
+            $device->{thermostat}->{changeableValues}->{heatSetpoint}->{value},
         ]);
     }
 
