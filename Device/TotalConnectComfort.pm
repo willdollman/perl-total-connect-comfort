@@ -53,9 +53,11 @@ sub new {
             ApplicationId => $app_id,
         );
 
-        open( my $response_fh, '>', $test_file )
-          or die "Unable to open file for writing: $!";
-        print $response_fh to_json($login_response);
+        if ($DEBUG) {
+            open( my $response_fh, '>', $test_file )
+            or die "Unable to open file for writing: $!";
+            print $response_fh to_json($login_response);
+        }
     }
 
     die "Server response did not contain a session id token"
