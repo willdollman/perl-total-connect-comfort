@@ -30,6 +30,10 @@ print "Setting default location ID to $location_id\n";
 my $location_data = $cn->get_location($location_id);
 describe_devices($location_data->[0]);
 
+# Describe gateways
+my $gateway_data = $cn->get_gateways($location_id);
+
+
 # Print some info
 sub describe_locations {
     my $locations_data = shift;

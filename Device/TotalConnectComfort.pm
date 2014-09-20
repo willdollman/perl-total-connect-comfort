@@ -168,4 +168,19 @@ sub get_location {
     return $location_data;
 }
 
+# Get data on gateways at a given location
+sub get_gateways {
+    my $self = shift;
+    my $location_id = shift;
+
+    my $gateway_data = _api_call(
+        method => 'GET',
+        path   => 'gateways',
+        url_params => { locationId => $location_id, allData => 'False', },
+    );
+
+    return $gateway_data;
+}
+
+
 1;
