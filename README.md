@@ -7,7 +7,7 @@ A Perl module that wraps the [Honeywell Total Connect Comfort][htcc] API. Allows
 
 ## Usage
 
-Call the test script with ./test_api.pl <username> <password> (don't forget to single quote that password if it contains symbols).
+Call the test script with ./test_api.pl *username* *password* (don't forget to single quote that password if it contains symbols).
 
 ## Cacti
 
