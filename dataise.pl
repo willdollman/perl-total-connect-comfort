@@ -29,9 +29,9 @@ describe_devices($location_data->[0]);
 
 # Describe gateways
 my $gateway_data = $cn->get_gateways($location_id);
+describe_gateways($gateway_data);
 
-
-# Print some info
+# Describe each location found
 sub describe_locations {
     my $locations_data = shift;
 
@@ -42,6 +42,7 @@ sub describe_locations {
     }
 }
 
+# Describe devices at a given location
 sub describe_devices {
     my $location_data = shift;
 
@@ -57,4 +58,13 @@ sub describe_devices {
     }
 
     print $tb;
+}
+
+# Describe all gateway devices found
+sub describe_gateways {
+    my $gateway_data = shift;
+
+    for my $gw (@$gateway_data) {
+        print "Found gateway ID $gw->{gatewayID} at location $gw->{locationId}";
+    }
 }
