@@ -12,7 +12,7 @@ my ($username, $password) = @ARGV;
 #my ($username, $password) = ('username', 'password'); # optionally hardcode user/pass
 
 # Log in
-my $cn = Device::TotalConnectComfort->new($username, $password, $is_test);
+my $cn = Device::TotalConnectComfort->new($username, $password);
 print "Logged in as $cn->{username}";
 
 # Get data for all our locations
