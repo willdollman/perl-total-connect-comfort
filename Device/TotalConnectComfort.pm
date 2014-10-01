@@ -30,8 +30,10 @@ sub new {
     shift;
     my $username = shift || croak "No username supplied";
     my $password = shift || croak "No password supplied";
-    my $app_id   = shift || croak "No application id supplied";
     my $is_test  = shift || 0;
+
+    # Hardcoded version of the app
+    my $app_id = '91db1612-73fd-4500-91b2-e63b069b185c';
 
     my $test_file = 't/login_response';
     my $login_response;

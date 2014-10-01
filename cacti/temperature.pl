@@ -1,19 +1,23 @@
 #!/usr/bin/perl
 
+# Script for use with Cacti's Data Input Methods
+# Usage: ./temperature.pl <username> <password>
+# Don't forget to put single quotes round any values that contain shell metacharacters
+# Returns all temperatures and setpoints for the first location it finds
+
+# Example output:
+# living_room:21 living_room_setpoint:5 bedroom_1:19.5 bedroom_1_setpoint:5
+
 use warnings;
 use strict;
 
 use Device::TotalConnectComfort qw( new );
 
-my $username = '';
-my $password = '';
-my $app_id   = '';
-
-my $is_test;
-#$is_test = 1;
+my ($username, $password) = @ARGV;
+#my ($username, $password) = ('username', 'password'); # optionally hardcode user/pass
 
 # Log in
-my $cn = Device::TotalConnectComfort->new($username, $password, $app_id, $is_test);
+my $cn = Device::TotalConnectComfort->new($username, $password);
 
 # Get data for all our locations
 my $locations_data = $cn->get_locations;

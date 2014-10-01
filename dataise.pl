@@ -8,15 +8,11 @@ use Text::Table;
 
 use Device::TotalConnectComfort qw( new );
 
-my $username = '';
-my $password = '';
-my $app_id   = '';
-
-my $is_test;
-#$is_test = 1;
+my ($username, $password) = @ARGV;
+#my ($username, $password) = ('username', 'password'); # optionally hardcode user/pass
 
 # Log in
-my $cn = Device::TotalConnectComfort->new($username, $password, $app_id, $is_test);
+my $cn = Device::TotalConnectComfort->new($username, $password, $is_test);
 print "Logged in as $cn->{username}";
 
 # Get data for all our locations
