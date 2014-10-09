@@ -13,11 +13,11 @@ use strict;
 
 use Device::TotalConnectComfort qw( new );
 
-my ($username, $password) = @ARGV;
+my ( $username, $password ) = @ARGV;
 #my ($username, $password) = ('username', 'password'); # optionally hardcode user/pass
 
 # Log in
-my $cn = Device::TotalConnectComfort->new($username, $password);
+my $cn = Device::TotalConnectComfort->new( $username, $password );
 
 # Get data for all our locations
 my $locations_data = $cn->get_locations;
@@ -32,16 +32,17 @@ sub cacti_output {
 
     my $output;
     my $boiler_on = 0;
-    for my $device (@{$location->{devices}}) {
+    for my $device ( @{ $location->{devices} } ) {
         $device->{name} =~ s/\s/_/g;
-        my $name = lc $device->{name};
+        my $name        = lc $device->{name};
         my $temperature = $device->{thermostat}->{indoorTemperature};
-        my $setpoint = $device->{thermostat}->{changeableValues}->{heatSetpoint}->{value};
+        my $setpoint =
+          $device->{thermostat}->{changeableValues}->{heatSetpoint}->{value};
 
         $output .= "$name:$temperature ";
         $output .= $name . "_setpoint:$setpoint ";
 
-        $boiler_on = 1 if ($setpoint > $temperature);
+        $boiler_on = 1 if ( $setpoint > $temperature );
     }
 
     $output .= "boiler_status:$boiler_on ";

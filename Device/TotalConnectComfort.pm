@@ -50,14 +50,14 @@ sub new {
         print "Actually logging in" if $DEBUG;
 
         $login_response = do_login(
-            Username => $username,
-            Password => $password,
+            Username      => $username,
+            Password      => $password,
             ApplicationId => $app_id,
         );
 
         if ($DEBUG) {
             open( my $response_fh, '>', $test_file )
-            or die "Unable to open file for writing: $!";
+              or die "Unable to open file for writing: $!";
             print $response_fh to_json($login_response);
         }
     }
@@ -91,14 +91,14 @@ sub do_login {
 
 # Creates a LWP::UserAgent request with the correct headers
 sub _setup_request {
-    my %params = @_;
     # method, path, url_params (url parameters), body (body content)
+    my %params = @_;
 
     # Setup location
     my $host      = 'https://rs.alarmnet.com';
     my $base_path = '/TotalConnectComfort/WebAPI/api/';
     my $url       = URI->new( $host . $base_path . $params{path} );
-    $url->query_form($params{url_params}) if $params{url_params};
+    $url->query_form( $params{url_params} ) if $params{url_params};
 
     # Add useragent string
     my $ua = LWP::UserAgent->new;
@@ -114,15 +114,15 @@ sub _setup_request {
 
 # Actually make the request, handle errors and return JSON-decoded body
 sub _handle_request {
-    my $ua = shift;
+    my $ua      = shift;
     my $request = shift;
-    my $debug = shift;
+    my $debug   = shift;
 
     my $r = $ua->request($request);
 
     die "Invalid username/password, or session timed out" if $r->code == '401';
-    die "App id is incorrect (or similar error)" if $r->code == '400';
-    die "Unknown error occurred: ", $r->code if $r->code != '200';
+    die "App id is incorrect (or similar error)"          if $r->code == '400';
+    die "Unknown error occurred: ", $r->code              if $r->code != '200';
 
     my $response_body = $r->content;
 
@@ -135,12 +135,12 @@ sub _api_call {
     my %params = @_;
 
     # Setup request
-    my ($ua, $request) = _setup_request(%params);
+    my ( $ua, $request ) = _setup_request(%params);
 
     print "Making request:\n", $request->as_string if $params{debug};
 
     # Make request, return JSON
-    return _handle_request($ua, $request);
+    return _handle_request( $ua, $request );
 }
 
 # Get data for all thermostats in all locations.
@@ -150,8 +150,8 @@ sub get_locations {
     my $self = shift;
 
     my $location_data = _api_call(
-        method => 'GET',
-        path   => 'locations',
+        method     => 'GET',
+        path       => 'locations',
         url_params => { userId => $self->{userID}, allData => 'True', }, # consistent casing, say what?
     );
 
@@ -160,12 +160,12 @@ sub get_locations {
 
 # Get data for a specific location
 sub get_location {
-    my $self = shift;
+    my $self        = shift;
     my $location_id = shift;
 
     my $location_data = _api_call(
-        method => 'GET',
-        path   => 'evoTouchSystems',
+        method     => 'GET',
+        path       => 'evoTouchSystems',
         url_params => { locationId => $location_id, allData => 'True', },
     );
 
@@ -174,17 +174,16 @@ sub get_location {
 
 # Get data on gateways at a given location
 sub get_gateways {
-    my $self = shift;
+    my $self        = shift;
     my $location_id = shift;
 
     my $gateway_data = _api_call(
-        method => 'GET',
-        path   => 'gateways',
+        method     => 'GET',
+        path       => 'gateways',
         url_params => { locationId => $location_id, allData => 'False', },
     );
 
     return $gateway_data;
 }
-
 
 1;
