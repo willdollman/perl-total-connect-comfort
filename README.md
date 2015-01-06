@@ -12,3 +12,5 @@ Call the test script with ./test_api.pl *username* *password* (don't forget to s
 ## Cacti
 
 Also includes Cacti scripts and templates to make setting up Cacti monitoring simple.
+
+I've written a [Cacti setup guide](http://will.dollman.org/2014/10/03/totalconnectcomfort-and-cacti-setup-guide/) (because sadly it's not *that* simple).
