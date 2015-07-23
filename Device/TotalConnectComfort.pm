@@ -10,15 +10,17 @@ use Data::Dumper;
 use File::Slurp;
 use JSON;
 use LWP::UserAgent;
+use URI::Escape qw( uri_escape );
 
 use base qw( Exporter );
 our @EXPORT_OK = qw( new );
 
-my $DEBUG = 0;
+my $DEBUG = 1;
 $\ = "\n";
 
 # Make the auth token globally accessible
 my $auth_token;
+my $app_id;
 
 # Requests:
 #   .../Session : Login to service, get user detains
@@ -33,7 +35,7 @@ sub new {
     my $is_test  = shift || 0;
 
     # Hardcoded version of the app
-    my $app_id = '91db1612-73fd-4500-91b2-e63b069b185c';
+    $app_id = '2ff150b4-a385-40d5-8899-5c6d88d2cbc2';
 
     my $test_file = 't/login_response';
     my $login_response;
@@ -52,7 +54,6 @@ sub new {
         $login_response = do_login(
             Username      => $username,
             Password      => $password,
-            ApplicationId => $app_id,
         );
 
         if ($DEBUG) {
@@ -62,13 +63,15 @@ sub new {
         }
     }
 
-    die "Server response did not contain a session id token"
-      unless $login_response->{sessionId};
-
     my $self;
-    $self->{sessionId} = $login_response->{sessionId};
+    $self->{sessionId} = $login_response->{access_token};
     $self->{username}  = $login_response->{userInfo}->{username};
     $self->{userID}    = $login_response->{userInfo}->{userID};
+
+    die "Server response did not contain a session id token"
+      unless $self->{sessionId};
+
+    print "Successfully authenticated - got session token:\n" . $self->{sessionId};
 
     # include a valid_until counter - unsure how long sessions are valid for
 
@@ -82,10 +85,17 @@ sub new {
 sub do_login {
     my %login_params = @_;
 
+    %login_params = (
+        %login_params,
+        'grant_type' => 'password',
+    );
+
+    my $query_body = join '&', map { uri_escape($_) . '=' . uri_escape($login_params{$_}) }  keys %login_params;
+
     return _api_call(
         method => 'POST',
-        path   => 'Session',
-        body   => to_json( \%login_params ),
+        path   => '/Auth/OAuth/Token',
+        body   => $query_body,
     );
 }
 
@@ -95,19 +105,27 @@ sub _setup_request {
     my %params = @_;
 
     # Setup location
-    my $host      = 'https://rs.alarmnet.com';
-    my $base_path = '/TotalConnectComfort/WebAPI/api/';
+    my $host      = 'https://tccna.honeywell.com';
+    my $base_path = '';
     my $url       = URI->new( $host . $base_path . $params{path} );
     $url->query_form( $params{url_params} ) if $params{url_params};
 
     # Add useragent string
     my $ua = LWP::UserAgent->new;
-    $ua->agent('User-Agent: RestSharp 104.1.0.0');
+    $ua->agent('User-Agent: RestSharp 104.4.0.0');
 
     my $request = HTTP::Request->new( $params{method} => $url );
     $request->header( 'Content-Type' => 'application/json' );
-    $request->header( 'sessionId' => $auth_token ) if $auth_token;
+    #$request->header( 'sessionId' => $auth_token ) if $auth_token;
+    $request->header( 'applicationId', $app_id );
     $request->content( $params{body} ) if $params{body};
+
+    if ($auth_token) {
+        $request->header( 'Authorization' => "bearer $auth_token" ); # Actual auth token
+    }
+    else {
+        $request->header( 'Authorization' => 'Basic MmZmMTUwYjQtYTM4NS00MGQ1LTg4OTktNWM2ZDg4ZDJjYmMyOjZGODhCOTgwLUI5OTUtNDUxRC04RTJBLTY2REMyQkNCRDU3MQ==' ); # Base64 Encoded App Token
+    }
 
     return ( $ua, $request );
 }
