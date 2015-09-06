@@ -15,18 +15,13 @@ use URI::Escape qw( uri_escape );
 use base qw( Exporter );
 our @EXPORT_OK = qw( new );
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 $\ = "\n";
 
-# Make the auth token globally accessible
-my $auth_token;
-my $app_id;
+my $BASE_PATH = '/WebAPI/emea/api/v1/';
 
-# Requests:
-#   .../Session : Login to service, get user detains
-#   .../locations?userId=377023&allData=True : Get data on all thermostats. If you have multiple locations, you use this to get data on them all.
-#   .../gateways?locationId=364809&allData=False : get data on base station/gateway
-#   .../evoTouchSystems?locationId=364809&allData=True : return all data for a location
+# Hardcoded version of the app
+my $app_id = '2ff150b4-a385-40d5-8899-5c6d88d2cbc2';
 
 sub new {
     shift;
@@ -34,8 +29,7 @@ sub new {
     my $password = shift || croak "No password supplied";
     my $is_test  = shift || 0;
 
-    # Hardcoded version of the app
-    $app_id = '2ff150b4-a385-40d5-8899-5c6d88d2cbc2';
+    my $self = bless {};
 
     my $test_file = 't/login_response';
     my $login_response;
@@ -51,7 +45,7 @@ sub new {
     else {
         print "Actually logging in" if $DEBUG;
 
-        $login_response = do_login(
+        $login_response = $self->do_login(
             Username      => $username,
             Password      => $password,
         );
@@ -63,36 +57,35 @@ sub new {
         }
     }
 
-    my $self;
-    $self->{sessionId} = $login_response->{access_token};
-    $self->{username}  = $login_response->{userInfo}->{username};
-    $self->{userID}    = $login_response->{userInfo}->{userID};
+
+    $self->{access_token} = $login_response->{access_token};
+    $self->{refresh_token} = $login_response->{refresh_token};
+    $self->{token_expires}    = time + $login_response->{expires_in};
 
     die "Server response did not contain a session id token"
-      unless $self->{sessionId};
+      unless $self->{access_token};
 
-    print "Successfully authenticated - got session token:\n" . $self->{sessionId};
+    print "Successfully authenticated - got session token:\n" . $self->{access_token} if $DEBUG;
 
-    # include a valid_until counter - unsure how long sessions are valid for
-
-    # store auth token
-    $auth_token = $self->{sessionId};
-
-    bless $self;
+    return $self;
 }
 
 # Perform login to API
 sub do_login {
+    my $self         = shift;
     my %login_params = @_;
 
+    # grant_type is either 'password' and sent username/password
+    # or set 'refresh_token' and send refresh_token from previous login response.
     %login_params = (
         %login_params,
         'grant_type' => 'password',
+        'scope'      => 'EMEA-V1-Basic EMEA-V1-Anonymous EMEA-V1-Get-Current-User-Account EMEA-V1-Contractor-Connections',
     );
 
     my $query_body = join '&', map { uri_escape($_) . '=' . uri_escape($login_params{$_}) }  keys %login_params;
 
-    return _api_call(
+    return $self->_api_call(
         method => 'POST',
         path   => '/Auth/OAuth/Token',
         body   => $query_body,
@@ -101,12 +94,14 @@ sub do_login {
 
 # Creates a LWP::UserAgent request with the correct headers
 sub _setup_request {
+    my $self   = shift;
     # method, path, url_params (url parameters), body (body content)
     my %params = @_;
 
     # Setup location
     my $host      = 'https://tccna.honeywell.com';
-    my $base_path = '';
+    # conditionally add default $BASE_PATH unless passed an absolute uri
+    my $base_path = (substr($params{path}, 0, 1) eq '/') ? '' : $BASE_PATH;
     my $url       = URI->new( $host . $base_path . $params{path} );
     $url->query_form( $params{url_params} ) if $params{url_params};
 
@@ -115,13 +110,14 @@ sub _setup_request {
     $ua->agent('User-Agent: RestSharp 104.4.0.0');
 
     my $request = HTTP::Request->new( $params{method} => $url );
-    $request->header( 'Content-Type' => 'application/json' );
-    #$request->header( 'sessionId' => $auth_token ) if $auth_token;
+    $request->header( 'Accept' => 'application/json' );
+    $request->header( 'Content-Type', 'application/x-www-form-urlencoded' );
+
     $request->header( 'applicationId', $app_id );
     $request->content( $params{body} ) if $params{body};
 
-    if ($auth_token) {
-        $request->header( 'Authorization' => "bearer $auth_token" ); # Actual auth token
+    if ($self->{access_token}) {
+        $request->header( 'Authorization' => "bearer $self->{access_token}" ); # Actual auth token
     }
     else {
         $request->header( 'Authorization' => 'Basic MmZmMTUwYjQtYTM4NS00MGQ1LTg4OTktNWM2ZDg4ZDJjYmMyOjZGODhCOTgwLUI5OTUtNDUxRC04RTJBLTY2REMyQkNCRDU3MQ==' ); # Base64 Encoded App Token
@@ -132,11 +128,12 @@ sub _setup_request {
 
 # Actually make the request, handle errors and return JSON-decoded body
 sub _handle_request {
-    my $ua      = shift;
-    my $request = shift;
-    my $debug   = shift;
+    my $self                   = shift;
+    my ($ua, $request, $debug) = @_;
 
     my $r = $ua->request($request);
+
+#    print "response:\n" . $r->as_string;
 
     die "Invalid username/password, or session timed out" if $r->code == '401';
     die "App id is incorrect (or similar error)"          if $r->code == '400';
@@ -150,15 +147,42 @@ sub _handle_request {
 # Put setup and requesting together
 # API parameters in, JSON out.
 sub _api_call {
+    my $self   = shift;
     my %params = @_;
 
     # Setup request
-    my ( $ua, $request ) = _setup_request(%params);
+    my ( $ua, $request ) = $self->_setup_request(%params);
 
     print "Making request:\n", $request->as_string if $params{debug};
 
     # Make request, return JSON
-    return _handle_request( $ua, $request );
+    return $self->_handle_request( $ua, $request );
+}
+
+# Get user account data
+#   API implies that an account might have multiple users?
+#   get data on all of them, or get the data of each if one is specified
+sub get_user_account {
+    my $self    = shift;
+    my $user_id = shift;
+
+    my $url_params = {};
+    if (defined $user_id) {
+        $url_params = { userId => $user_id, }
+    }
+
+    my $account_data = $self->_api_call(
+        method     => 'GET',
+        path       => 'userAccount',
+        url_params => $url_params,
+    );
+
+    if (!defined($user_id)) {
+        $self->{user_id}    = $account_data->{userId};
+        $self->{username}  = $account_data->{username};
+    }
+
+    return $account_data;
 }
 
 # Get data for all thermostats in all locations.
@@ -167,27 +191,43 @@ sub _api_call {
 sub get_locations {
     my $self = shift;
 
-    my $location_data = _api_call(
+    my $location_data = $self->_api_call(
         method     => 'GET',
-        path       => 'locations',
-        url_params => { userId => $self->{userID}, allData => 'True', }, # consistent casing, say what?
+        path       => 'location/installationInfo',
+        url_params => { userId => $self->{user_id}, includeTemperatureControlSystems => 'True', },
     );
 
     return $location_data;
 }
 
 # Get data for a specific location
+#   Does not include any sensor data
 sub get_location {
     my $self        = shift;
     my $location_id = shift;
 
-    my $location_data = _api_call(
+    my $location_data = $self->_api_call(
         method     => 'GET',
-        path       => 'evoTouchSystems',
-        url_params => { locationId => $location_id, allData => 'True', },
+        path       => 'location/' . $location_id . '/installationInfo',
+        url_params => { includeTemperatureControlSystems => 'True', },
     );
 
     return $location_data;
+}
+
+# Get data for a specific location
+#   Includes temperatures in all zones and zone definitions
+sub get_status {
+    my $self        = shift;
+    my $location_id = shift;
+
+    my $status_data = $self->_api_call(
+        method     => 'GET',
+        path       => 'location/' . $location_id . '/status',
+        url_params => { includeTemperatureControlSystems => 'True', },
+    );
+
+    return $status_data;
 }
 
 # Get data on gateways at a given location
@@ -195,13 +235,96 @@ sub get_gateways {
     my $self        = shift;
     my $location_id = shift;
 
-    my $gateway_data = _api_call(
+    my $gateway_data = $self->_api_call(
         method     => 'GET',
-        path       => 'gateways',
-        url_params => { locationId => $location_id, allData => 'False', },
+        path       => 'gateway',
+        url_params => { locationId => $location_id, },
     );
 
     return $gateway_data;
 }
+
+# Get schedule for a specific temperature zone
+sub get_schedules {
+    my $self    = shift;
+    my $zone_id = shift;
+
+    my $zone_data = $self->_api_call(
+        method     => 'GET',
+        path       => 'temperatureZone/' . $zone_id . '/schedule',
+        url_params => { },
+    );
+
+    return $zone_data;
+}
+
+# Set schedule for a specific temperature zone
+# Send a complete JSON schedule as returned by get_schedule()
+# Difference from get_schedule seems to be that dayOfWeek is a numeral 0-6 when set by the app
+# But it's returned as english "Monday", etc from the server in get_schedule...?
+sub set_schedule {
+    my $self     = shift;
+    my $zone_id  = shift;
+    my $schedule = shift;
+
+    my $zone_data = $self->_api_call(
+        method     => 'PUT',
+        path       => 'temperatureZone/' . $zone_id . '/schedule',
+        url_params => { },
+        body       => $schedule,
+    );
+
+    return $zone_data;
+}
+
+# Set override mode for a specific temperature zone
+# Send a complete JSON schedule as returned by get_schedule()
+# Returns an id... Not sure what this is for
+# $system_mode is one of the options from get_location
+# $time_until is in RFC format, eg "2015-09-06T06:00:00Z"
+sub set_mode {
+    my $self    = shift;
+    my $zone_id = shift;
+    my ($permanent, $system_mode, $time_until) = @_;
+
+    my $body = to_json( { "Permanent"  => $permanent,
+                          "SystemMode" => $system_mode,
+                          "TimeUntil"  => $time_until } );
+
+    my $zone_data = $self->_api_call(
+        method     => 'PUT',
+        path       => 'temperatureZone/' . $zone_id . '/mode',
+        url_params => { },
+        body       => $body,
+    );
+
+    return $zone_data;
+}
+
+# Set heat setpoint for a specific temperature zone
+# Returns an id... Not sure what this is for
+# FIXME: Is there a cool setpoint call..?
+# Mode = 0 - cancel
+# Mode = 1 - permanent?
+# Mode = 2 - set until
+sub set_heat_setpoint {
+    my $self    = shift;
+    my $zone_id = shift;
+    my ($heat_setpoint_value, $setpoint_mode, $time_until) = @_;
+
+    my $body = to_json( { HeatSetpointValue => $heat_setpoint_value,
+                          SetpointMode      => $setpoint_mode,
+                          TimeUntil         => $time_until } );
+
+    my $zone_data = $self->_api_call(
+        method     => 'PUT',
+        path       => 'temperatureZone/' . $zone_id . '/heatSetpoint',
+        url_params => { },
+        body       => $body,
+    );
+
+    return $zone_data;
+}
+
 
 1;
