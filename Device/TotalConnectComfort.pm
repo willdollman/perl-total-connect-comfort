@@ -191,6 +191,11 @@ sub get_user_account {
 sub get_locations {
     my $self = shift;
 
+    # Must ensure we have retrieved our user_id value
+    if (!defined($self->{user_id})) {
+        $self->get_user_account;
+    }
+
     my $location_data = $self->_api_call(
         method     => 'GET',
         path       => 'location/installationInfo',

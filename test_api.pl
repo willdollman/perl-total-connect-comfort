@@ -8,6 +8,9 @@ use Text::Table;
 
 use Device::TotalConnectComfort qw( new );
 
+# AUTHENTICATION:
+# This can be passed in via the commandline (beware visible to ps..),
+# Or preferably set environment variable TCC_USERNAME & TCC_PASSWORD
 my ($username, $password) = @ARGV;
 #my ($username, $password) = ('username', 'password'); # optionally hardcode user/pass
 $username = $ENV{TCC_USERNAME} unless $username;
@@ -34,6 +37,8 @@ describe_status( $status_data );
 my $gateway_data = $cn->get_gateways($location_id);
 describe_gateways($gateway_data);
 
+# print Dumper($locations_data);
+# print Dumper($status_data);
 
 # Describe each location found
 sub describe_locations {
@@ -54,14 +59,14 @@ sub describe_status {
     #print "\n", scalar @{$status_data->{devices}}, " devices:";
     my $tb =
       Text::Table->new( 'Location', 'Temperature °C', 'Status', 'Setpoint °C', 'ZoneId' );
-    for my $device ( @{ $status_data->{gateways}->[0]->{temperatureControlSystems}->[0]->{zones} } ) {
+    for my $zone ( @{ $status_data->{gateways}->[0]->{temperatureControlSystems}->[0]->{zones} } ) {
         $tb->load(
             [
-                $device->{name},
-                "$device->{temperatureStatus}->{temperature}",
-                $device->{setpointStatus}->{setpointMode},
-                $device->{setpointStatus}->{targetHeatTemperature},
-                $device->{zoneId},
+                $zone->{name},
+                $zone->{temperatureStatus}->{temperature},
+                $zone->{setpointStatus}->{setpointMode},
+                $zone->{setpointStatus}->{targetHeatTemperature},
+                $zone->{zoneId},
             ]
         );
     }
