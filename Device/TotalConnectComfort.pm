@@ -25,9 +25,14 @@ my $app_id = '2ff150b4-a385-40d5-8899-5c6d88d2cbc2';
 
 sub new {
     shift;
-    my $username = shift || croak "No username supplied";
-    my $password = shift || croak "No password supplied";
-    my $is_test  = shift || 0;
+    my %params = @_;
+
+    unless ( exists($params{refresh_token}) || ( exists($params{username}) && exists($params{password})) ) {
+        croak "Must supply either username/password or refresh_token";
+    }
+
+    my $is_test  = $params{test} || 0;
+    delete $params{test};
 
     my $self = bless {};
 
@@ -45,10 +50,7 @@ sub new {
     else {
         print "Actually logging in" if $DEBUG;
 
-        $login_response = $self->do_login(
-            Username      => $username,
-            Password      => $password,
-        );
+        $login_response = $self->do_login( %params );
 
         if ($DEBUG) {
             open( my $response_fh, '>', $test_file )
@@ -57,17 +59,18 @@ sub new {
         }
     }
 
-
-    $self->{access_token} = $login_response->{access_token};
-    $self->{refresh_token} = $login_response->{refresh_token};
-    $self->{token_expires}    = time + $login_response->{expires_in};
-
-    die "Server response did not contain a session id token"
+    die "Error during login. Server response did not contain a session id token"
       unless $self->{access_token};
 
     print "Successfully authenticated - got session token:\n" . $self->{access_token} if $DEBUG;
 
     return $self;
+}
+
+# Helper function
+sub uri_encode_params {
+    my $params = shift;
+    my $uri = join '&', map { uri_escape($_) . '=' . uri_escape($params->{$_}) }  keys $params;
 }
 
 # Perform login to API
@@ -77,19 +80,36 @@ sub do_login {
 
     # grant_type is either 'password' and sent username/password
     # or set 'refresh_token' and send refresh_token from previous login response.
-    %login_params = (
-        %login_params,
-        'grant_type' => 'password',
-        'scope'      => 'EMEA-V1-Basic EMEA-V1-Anonymous EMEA-V1-Get-Current-User-Account EMEA-V1-Contractor-Connections',
-    );
+    if (exists($login_params{refresh_token})) {
+        %login_params = (
+            %login_params,
+            'grant_type' => 'refresh_token',
+            'scope'      => 'EMEA-V1-Basic EMEA-V1-Anonymous EMEA-V1-Get-Current-User-Account EMEA-V1-Contractor-Connections',
+        );
+    } else {
+        %login_params = (
+            %login_params,
+            'grant_type' => 'password',
+            'scope'      => 'EMEA-V1-Basic EMEA-V1-Anonymous EMEA-V1-Get-Current-User-Account EMEA-V1-Contractor-Connections',
+        );
+    }
 
-    my $query_body = join '&', map { uri_escape($_) . '=' . uri_escape($login_params{$_}) }  keys %login_params;
+    my $query_body = uri_encode_params(\%login_params);
 
-    return $self->_api_call(
+    # Ensure we erase our old access token. It should be recreated when we login successfully
+    delete $self->{access_token};
+
+    my $login_response = $self->_api_call(
         method => 'POST',
         path   => '/Auth/OAuth/Token',
         body   => $query_body,
     );
+
+    $self->{access_token} = $login_response->{access_token};
+    $self->{refresh_token} = $login_response->{refresh_token};
+    $self->{token_expires}    = time + $login_response->{expires_in};
+
+    return $login_response;
 }
 
 # Creates a LWP::UserAgent request with the correct headers

@@ -17,7 +17,8 @@ $username = $ENV{TCC_USERNAME} unless $username;
 $password = $ENV{TCC_PASSWORD} unless $password;
 
 # Log in
-my $cn = Device::TotalConnectComfort->new( $username, $password );
+my $cn = Device::TotalConnectComfort->new( username => $username,
+                                           password => $password );
 print "Logged in\n";
 my $account = $cn->get_user_account;
 
@@ -36,6 +37,9 @@ describe_status( $status_data );
 # Describe gateways
 my $gateway_data = $cn->get_gateways($location_id);
 describe_gateways($gateway_data);
+
+# Refresh/re-login with the login token... (just to show how)
+$cn->do_login(refresh_token => $cn->{refresh_token});
 
 # print Dumper($locations_data);
 # print Dumper($status_data);

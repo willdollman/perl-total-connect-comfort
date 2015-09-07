@@ -19,7 +19,8 @@ $username = $ENV{TCC_USERNAME} unless $username;
 $password = $ENV{TCC_PASSWORD} unless $password;
 
 # Log in
-my $cn = Device::TotalConnectComfort->new( $username, $password );
+my $cn = Device::TotalConnectComfort->new( username => $username,
+                                           password => $password );
 
 # Get data for all our locations
 my $locations_data = $cn->get_locations;
