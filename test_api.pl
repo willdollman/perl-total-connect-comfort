@@ -10,6 +10,8 @@ use Device::TotalConnectComfort qw( new );
 
 my ($username, $password) = @ARGV;
 #my ($username, $password) = ('username', 'password'); # optionally hardcode user/pass
+$username = $ENV{TCC_USERNAME} unless $username;
+$password = $ENV{TCC_PASSWORD} unless $password;
 
 # Log in
 my $cn = Device::TotalConnectComfort->new( $username, $password );
