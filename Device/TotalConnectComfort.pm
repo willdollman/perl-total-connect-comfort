@@ -7,7 +7,6 @@ package Device::TotalConnectComfort;
 
 use Carp;
 use Data::Dumper;
-use File::Slurp;
 use JSON;
 use LWP::UserAgent;
 use URI::Escape qw( uri_escape );
