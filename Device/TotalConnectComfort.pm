@@ -152,7 +152,7 @@ sub _handle_request {
 
     my $r = $ua->request($request);
 
-#    print "response:\n" . $r->as_string;
+    print "\nFull error message:\n\n" . $r->as_string if $r->code != 200;
 
     die "Invalid username/password, or session timed out" if $r->code == '401';
     die "App id is incorrect (or similar error)"          if $r->code == '400';
