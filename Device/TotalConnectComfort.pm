@@ -69,7 +69,7 @@ sub new {
 # Helper function
 sub uri_encode_params {
     my $params = shift;
-    my $uri = join '&', map { uri_escape($_) . '=' . uri_escape($params->{$_}) }  keys $params;
+    my $uri = join '&', map { uri_escape($_) . '=' . uri_escape($params->{$_}) } keys %$params;
 }
 
 # Perform login to API
