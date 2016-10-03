@@ -130,7 +130,7 @@ sub _setup_request {
 
     my $request = HTTP::Request->new( $params{method} => $url );
     $request->header( 'Accept' => 'application/json' );
-    $request->header( 'Content-Type', 'application/x-www-form-urlencoded' );
+    $request->header( 'Content-Type' => 'application/json');
 
     $request->header( 'applicationId', $app_id );
     $request->content( $params{body} ) if $params{body};
@@ -152,11 +152,11 @@ sub _handle_request {
 
     my $r = $ua->request($request);
 
-    print "\nFull error message:\n\n" . $r->as_string if $r->code != 200;
+    print "\nFull error message:\n\n" . $r->as_string if $r->code >= 300;
 
-    die "Invalid username/password, or session timed out" if $r->code == '401';
-    die "App id is incorrect (or similar error)"          if $r->code == '400';
-    die "Unknown error occurred: ", $r->code              if $r->code != '200';
+    die "Invalid username/password, or session timed out" if $r->code == 401;
+    die "App id is incorrect (or similar error)"          if $r->code == 400;
+    die "Unknown error occurred: ", $r->code              if $r->code >= 300;
 
     my $response_body = $r->content;
 
