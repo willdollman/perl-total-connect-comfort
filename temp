@@ -1,0 +1,71 @@
+#!/usr/bin/env perl
+
+use warnings;
+use strict;
+use v5.14;
+use open qw( :encoding(UTF-8) :std);
+
+use Cwd qw(abs_path);
+use File::Basename qw(dirname basename);
+BEGIN {
+	use lib dirname(abs_path($0));
+}
+
+use Device::TotalConnectComfort;
+use Config::Tiny;
+use DateTime;
+
+my ($temp, $duration) = @ARGV;
+$duration ||= "";
+
+my $dt = DateTime->now(time_zone => "local");
+if($duration =~ /^(\d+) seconds?$/) {
+	$dt->add(seconds => $1);
+} elsif($duration =~ /^(\d+) minutes?$/) {
+	$dt->add(minutes => $1);
+} elsif($duration =~ /^(\d+) hours?$/) {
+	$dt->add(hours => $1);
+} elsif($duration =~ /^\+(\d+):(\d+)(?::(\d+))?$/) {
+	$dt->add(hours => $1, minutes => $2);
+	if($3) {
+		$dt->add(seconds => $3);
+	}
+} elsif($duration =~ /^(\d+):(\d+)(?::(\d+))?$/) {
+	my $dt_old = $dt->clone();
+	$dt->set_hour($1);
+	$dt->set_minute($2);
+	$dt->set_second($3 || 0);
+	if($dt < $dt_old) {
+		$dt->add(days => 1);
+	}
+} else {
+	my $bn = basename($0);
+	warn "Usage: $bn <temp> <duration>\n\n";
+	warn "Examples:\n";
+	warn "  $bn 22.0 \"2 hours\" - set temperature to 22.0\xb0C for the next 2 hours\n";
+	warn "  $bn 18.5 +00:30    - set temperature to 18.5\xb0C for the next 30 minutes\n";
+	warn "  $bn 23 22:00       - set temperature to 23.0\xb0C until 22:00\n";
+	exit(1);
+}
+
+my $config = Config::Tiny->read($ENV{HOME} . "/.tccrc");
+if(!$config) {
+	print "No configuration found. Write the following to your ~/.tccrc:\n";
+	print "  username=...\n";
+	print "  password=...\n";
+	print "Fill in the values, then try again.\n";
+	exit 1;
+}
+my $username = $config->{_}{'username'};
+my $password = $config->{_}{'password'};
+
+my $cn = Device::TotalConnectComfort->new(username => $username, password => $password);
+my $location = $cn->get_locations->[0];
+my $location_id = $location->{locationInfo}{locationId};
+my $zone_id = $location->{'gateways'}[0]{'temperatureControlSystems'}[0]{'zones'}[0]{'zoneId'};
+
+$dt->set_time_zone('UTC');
+my $setpoind_id = $cn->set_heat_setpoint($zone_id, $temp, "TemporaryOverride", $dt->iso8601 . 'Z');
+
+$dt->set_time_zone('local');
+print "Temperature set to ${temp}\xb0C until " . $dt->hms . "\n";
