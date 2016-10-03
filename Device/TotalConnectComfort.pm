@@ -1,9 +1,6 @@
-#!/usr/bin/perl
-
+package Device::TotalConnectComfort;
 use warnings;
 use strict;
-
-package Device::TotalConnectComfort;
 
 use Carp;
 use Data::Dumper;
@@ -11,11 +8,8 @@ use JSON;
 use LWP::UserAgent;
 use URI::Escape qw( uri_escape );
 
-use base qw( Exporter );
-our @EXPORT_OK = qw( new );
-
 my $DEBUG = 0;
-$\ = "\n";
+local $\ = "\n";
 
 my $BASE_PATH = '/WebAPI/emea/api/v1/';
 
