@@ -38,13 +38,14 @@ if($duration =~ /^(\d+) seconds?$/) {
 	if($dt < $dt_old) {
 		$dt->add(days => 1);
 	}
-} else {
+} elsif($temp ne "-") {
 	my $bn = basename($0);
 	warn "Usage: $bn <temp> <duration>\n\n";
 	warn "Examples:\n";
 	warn "  $bn 22.0 \"2 hours\" - set temperature to 22.0\xb0C for the next 2 hours\n";
 	warn "  $bn 18.5 +00:30    - set temperature to 18.5\xb0C for the next 30 minutes\n";
 	warn "  $bn 23 22:00       - set temperature to 23.0\xb0C until 22:00\n";
+	warn "  $bn -              - cancel temporary temperature change\n";
 	exit(1);
 }
 
@@ -64,8 +65,13 @@ my $location = $cn->get_locations->[0];
 my $location_id = $location->{locationInfo}{locationId};
 my $zone_id = $location->{'gateways'}[0]{'temperatureControlSystems'}[0]{'zones'}[0]{'zoneId'};
 
-$dt->set_time_zone('UTC');
-my $setpoind_id = $cn->set_heat_setpoint($zone_id, $temp, "TemporaryOverride", $dt->iso8601 . 'Z');
+if($temp eq "-") {
+	$cn->set_heat_setpoint($zone_id, 0, "FollowSchedule");
+	print "Temporary temperature cancelled.\n";
+} else {
+	$dt->set_time_zone('UTC');
+	$cn->set_heat_setpoint($zone_id, $temp, "TemporaryOverride", $dt->iso8601 . 'Z');
 
-$dt->set_time_zone('local');
-print "Temperature set to ${temp}\xb0C until " . $dt->hms . "\n";
+	$dt->set_time_zone('local');
+	print "Temperature set to ${temp}\xb0C until " . $dt->hms . "\n";
+}
