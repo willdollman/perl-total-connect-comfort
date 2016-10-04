@@ -6,7 +6,7 @@ use strict;
 use Data::Dumper;
 use Text::Table;
 
-use Device::TotalConnectComfort qw( new );
+use Device::TotalConnectComfort;
 
 # AUTHENTICATION:
 # This can be passed in via the commandline (beware visible to ps..),
@@ -51,7 +51,7 @@ sub describe_locations {
     print "Found ", scalar @$locations_data, ' ',
       ( scalar @$locations_data == 1 ) ? 'location' : 'locations', "\n";
     for my $location (@$locations_data) {
-        print "Location $location->{locationInfo}->{locationId} ($location->{locationInfo}->{streetAddress})\n---";
+        print "Location $location->{locationInfo}->{locationId} ($location->{locationInfo}->{streetAddress})\n---\n";
         # describe_devices($location);
     }
 }
@@ -83,7 +83,7 @@ sub describe_gateways {
     my $gateway_data = shift;
 
     for my $gw (@$gateway_data) {
-        print "Found gateway ID: $gw->{gatewayId}, MAC address: $gw->{mac}";
+        print "Found gateway ID: $gw->{gatewayId}, MAC address: $gw->{mac}\n";
     }
 }
 
